@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAMACON Social Image Generator</title>
+  <link rel="preload" href="/fonts/Mont-HeavyDEMO.otf" as="font" type="font/otf" crossorigin>
+  <style>
+    @font-face {
+      font-family: 'Mont';
+      src: url('/fonts/Mont-HeavyDEMO.otf') format('opentype');
+      font-weight: 900;
+      font-style: normal;
+      font-display: block;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0e1217;
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      margin: 20px 0;
+      font-size: 2rem;
+      text-align: center;
+      color: #6df56d;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+    }
+
+    .upload-section {
+      background: #1a1f26;
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .upload-label {
+      display: inline-block;
+      background: #6df56d;
+      color: #0e1217;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+
+    .upload-label:hover {
+      opacity: 0.8;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .editor-section {
+      background: #1a1f26;
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .editor-section.visible {
+      display: block;
+    }
+
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto 20px;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #2a2f36;
+    }
+
+    .preview-canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      cursor: move;
+      user-select: none;
+    }
+
+    .controls {
+      margin: 20px 0;
+    }
+
+    .control-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 0.9rem;
+      color: #b0b8c0;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #2a2f36;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #6df56d;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #6df56d;
+      cursor: pointer;
+      border: none;
+    }
+
+    .zoom-value {
+      display: inline-block;
+      margin-left: 10px;
+      color: #6df56d;
+      font-weight: 600;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      background: #6df56d;
+      color: #0e1217;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      font-size: 1rem;
+    }
+
+    button:hover:not(:disabled) {
+      opacity: 0.8;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: #2a2f36;
+      color: #ffffff;
+    }
+
+    .result-section {
+      background: #1a1f26;
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      display: none;
+    }
+
+    .result-section.visible {
+      display: block;
+    }
+
+    .result-image {
+      max-width: 100%;
+      border-radius: 12px;
+      margin: 20px 0;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: #6df56d;
+    }
+
+    .loading.visible {
+      display: block;
+    }
+
+    .error {
+      background: #ff4444;
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      display: none;
+    }
+
+    .error.visible {
+      display: block;
+    }
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      .upload-section, .editor-section, .result-section {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>GAMACON Social Image Generator</h1>
+
+  <div class="container">
+    <div class="upload-section">
+      <label for="photo-upload" class="upload-label">Upload Your Photo</label>
+      <input type="file" id="photo-upload" accept="image/*">
+    </div>
+
+    <div class="editor-section" id="editor-section">
+      <div class="canvas-container">
+        <canvas id="preview-canvas" class="preview-canvas"></canvas>
+      </div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label for="zoom-slider">
+            Zoom
+            <span class="zoom-value" id="zoom-value">100%</span>
+          </label>
+          <input type="range" id="zoom-slider" min="50" max="300" value="100" step="1">
+        </div>
+        <p style="text-align: center; color: #b0b8c0; font-size: 0.9rem; margin-top: 10px;">
+          Drag the image to reposition
+        </p>
+
+        <div class="control-group">
+          <label for="name-input">Your Name</label>
+          <input type="text" id="name-input" placeholder="Jane Doe" maxlength="23" style="width: 100%; padding: 8px; background: #2a2f36; border: 1px solid #444; color: white; border-radius: 4px;">
+        </div>
+
+        <div class="control-group">
+          <label for="position-input">Position</label>
+          <input type="text" id="position-input" placeholder="Game Developer" maxlength="32" style="width: 100%; padding: 8px; background: #2a2f36; border: 1px solid #444; color: white; border-radius: 4px;">
+        </div>
+
+        <div class="control-group">
+          <label for="company-input">Company</label>
+          <input type="text" id="company-input" placeholder="Amazing Games Inc." maxlength="32" style="width: 100%; padding: 8px; background: #2a2f36; border: 1px solid #444; color: white; border-radius: 4px;">
+        </div>
+
+      </div>
+
+      <div class="button-group">
+        <button id="generate-btn">Generate Image</button>
+        <button class="secondary" id="reset-btn">Upload Different Photo</button>
+      </div>
+    </div>
+
+    <div class="loading" id="loading">
+      <p>Generating your image...</p>
+    </div>
+
+    <div class="error" id="error"></div>
+
+    <div class="result-section" id="result-section">
+      <h2 style="margin-bottom: 15px; color: #6df56d;">Your GAMACON Image is Ready!</h2>
+      <img id="result-image" class="result-image" alt="Generated image">
+      <div class="button-group">
+        <button id="share-btn">Share</button>
+        <button class="secondary" id="download-btn">Download</button>
+        <button class="secondary" id="new-image-btn">Create Another</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Ensure Mont font is loaded before rendering
+    let fontLoaded = false;
+
+    if (document.fonts) {
+      document.fonts.load('900 32px Mont').then(() => {
+        fontLoaded = true;
+      });
+    }
+
+    const state = {
+      uploadedImage: null,
+      templateBgImage: null,
+      templateFgImage: null,
+      zoom: 1,
+      offsetX: 0,
+      offsetY: 0,
+      isDragging: false,
+      lastMouseX: 0,
+      lastMouseY: 0,
+      finalImageDataUrl: null,
+      textOffsetX: 50,
+      textOffsetY: 90,
+      name: '',
+      position: '',
+      company: ''
+    };
+
+    const maskRegion = {
+      x: 71,
+      y: 55,
+      width: 500,
+      height: 550
+    };
+
+    const fgOffset = {
+      x: 555,
+      y: 261
+    };
+
+    // Elements
+    const photoUpload = document.getElementById('photo-upload');
+    const editorSection = document.getElementById('editor-section');
+    const previewCanvas = document.getElementById('preview-canvas');
+    const ctx = previewCanvas.getContext('2d');
+    const zoomSlider = document.getElementById('zoom-slider');
+    const zoomValue = document.getElementById('zoom-value');
+    const generateBtn = document.getElementById('generate-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const loading = document.getElementById('loading');
+    const error = document.getElementById('error');
+    const resultSection = document.getElementById('result-section');
+    const resultImage = document.getElementById('result-image');
+    const shareBtn = document.getElementById('share-btn');
+    const downloadBtn = document.getElementById('download-btn');
+    const newImageBtn = document.getElementById('new-image-btn');
+
+    // Load template images (background and foreground)
+    const templateBgImg = new Image();
+    templateBgImg.src = '/templates/gamacon-bg.png';
+    templateBgImg.onload = () => {
+      state.templateBgImage = templateBgImg;
+    };
+
+    const templateFgImg = new Image();
+    templateFgImg.src = '/templates/gamacon-fg.png';
+    templateFgImg.onload = () => {
+      state.templateFgImage = templateFgImg;
+    };
+
+    // Photo upload handler
+    photoUpload.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          state.uploadedImage = img;
+          state.zoom = 1;
+          state.offsetX = 0;
+          state.offsetY = 0;
+          zoomSlider.value = 100;
+          editorSection.classList.add('visible');
+          resultSection.classList.remove('visible');
+          renderPreview();
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Zoom slider handler
+    zoomSlider.addEventListener('input', (e) => {
+      state.zoom = e.target.value / 100;
+      zoomValue.textContent = `${e.target.value}%`;
+      renderPreview();
+    });
+
+    // Canvas drag handlers
+    previewCanvas.addEventListener('mousedown', (e) => {
+      state.isDragging = true;
+      state.lastMouseX = e.offsetX;
+      state.lastMouseY = e.offsetY;
+    });
+
+    previewCanvas.addEventListener('mousemove', (e) => {
+      if (!state.isDragging) return;
+
+      const deltaX = e.offsetX - state.lastMouseX;
+      const deltaY = e.offsetY - state.lastMouseY;
+
+      state.offsetX += deltaX;
+      state.offsetY += deltaY;
+
+      state.lastMouseX = e.offsetX;
+      state.lastMouseY = e.offsetY;
+
+      renderPreview();
+    });
+
+    previewCanvas.addEventListener('mouseup', () => {
+      state.isDragging = false;
+    });
+
+    previewCanvas.addEventListener('mouseleave', () => {
+      state.isDragging = false;
+    });
+
+    // Touch support for mobile
+    previewCanvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = previewCanvas.getBoundingClientRect();
+      state.isDragging = true;
+      state.lastMouseX = touch.clientX - rect.left;
+      state.lastMouseY = touch.clientY - rect.top;
+    });
+
+    previewCanvas.addEventListener('touchmove', (e) => {
+      if (!state.isDragging) return;
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      const rect = previewCanvas.getBoundingClientRect();
+      const touchX = touch.clientX - rect.left;
+      const touchY = touch.clientY - rect.top;
+
+      const deltaX = touchX - state.lastMouseX;
+      const deltaY = touchY - state.lastMouseY;
+
+      state.offsetX += deltaX;
+      state.offsetY += deltaY;
+
+      state.lastMouseX = touchX;
+      state.lastMouseY = touchY;
+
+      renderPreview();
+    });
+
+    previewCanvas.addEventListener('touchend', () => {
+      state.isDragging = false;
+    });
+
+    // Add event listeners for text inputs to update preview
+    document.getElementById('name-input').addEventListener('input', renderPreview);
+    document.getElementById('position-input').addEventListener('input', renderPreview);
+    document.getElementById('company-input').addEventListener('input', renderPreview);
+
+    // Render preview
+    async function renderPreview() {
+      if (!state.uploadedImage || !state.templateBgImage || !state.templateFgImage) return;
+
+      // Ensure font is loaded before rendering
+      if (document.fonts && !fontLoaded) {
+        await document.fonts.load('900 32px Mont');
+        fontLoaded = true;
+      }
+
+      // Set canvas size to match template
+      previewCanvas.width = state.templateBgImage.width;
+      previewCanvas.height = state.templateBgImage.height;
+
+      // Draw background template
+      ctx.drawImage(state.templateBgImage, 0, 0);
+
+      // Save context for clipping
+      ctx.save();
+
+      // Create rounded rectangle clipping path
+      const radius = 34;
+      ctx.beginPath();
+      ctx.moveTo(maskRegion.x + radius, maskRegion.y);
+      ctx.lineTo(maskRegion.x + maskRegion.width - radius, maskRegion.y);
+      ctx.quadraticCurveTo(maskRegion.x + maskRegion.width, maskRegion.y, maskRegion.x + maskRegion.width, maskRegion.y + radius);
+      ctx.lineTo(maskRegion.x + maskRegion.width, maskRegion.y + maskRegion.height - radius);
+      ctx.quadraticCurveTo(maskRegion.x + maskRegion.width, maskRegion.y + maskRegion.height, maskRegion.x + maskRegion.width - radius, maskRegion.y + maskRegion.height);
+      ctx.lineTo(maskRegion.x + radius, maskRegion.y + maskRegion.height);
+      ctx.quadraticCurveTo(maskRegion.x, maskRegion.y + maskRegion.height, maskRegion.x, maskRegion.y + maskRegion.height - radius);
+      ctx.lineTo(maskRegion.x, maskRegion.y + radius);
+      ctx.quadraticCurveTo(maskRegion.x, maskRegion.y, maskRegion.x + radius, maskRegion.y);
+      ctx.closePath();
+      ctx.clip();
+
+      // Calculate scaled dimensions
+      const scaledWidth = state.uploadedImage.width * state.zoom;
+      const scaledHeight = state.uploadedImage.height * state.zoom;
+
+      // Calculate position (centered + offset)
+      const centerX = maskRegion.x + maskRegion.width / 2;
+      const centerY = maskRegion.y + maskRegion.height / 2;
+      const x = centerX - scaledWidth / 2 + state.offsetX;
+      const y = centerY - scaledHeight / 2 + state.offsetY;
+
+      // Draw user image
+      ctx.drawImage(state.uploadedImage, x, y, scaledWidth, scaledHeight);
+
+      // Restore context
+      ctx.restore();
+
+      // Draw foreground template on top with offset
+      ctx.drawImage(state.templateFgImage, fgOffset.x, fgOffset.y);
+
+      // Draw text preview if any text is entered
+      const name = document.getElementById('name-input').value;
+      const position = document.getElementById('position-input').value;
+      const company = document.getElementById('company-input').value;
+
+      if (name || position || company) {
+        // Same text rendering logic as server-side
+        const padding = 20;
+        const lineHeight = 40;
+        let maxWidth = 0;
+        let lines = [];
+
+        if (name) {
+          ctx.font = '900 32px Mont';
+          const metrics = ctx.measureText(name);
+          lines.push({ text: name, font: '900 32px Mont', width: metrics.width, size: 32 });
+          maxWidth = Math.max(maxWidth, metrics.width);
+        }
+
+        if (position) {
+          ctx.font = '900 24px Mont';
+          const metrics = ctx.measureText(position);
+          lines.push({ text: position, font: '900 24px Mont', width: metrics.width, size: 24 });
+          maxWidth = Math.max(maxWidth, metrics.width);
+        }
+
+        if (company) {
+          ctx.font = '900 24px Mont';
+          const metrics = ctx.measureText(company);
+          lines.push({ text: company, font: '900 24px Mont', width: metrics.width, size: 24 });
+          maxWidth = Math.max(maxWidth, metrics.width);
+        }
+
+        // Calculate background dimensions
+        const bgWidth = maxWidth + (padding * 2);
+        const bgHeight = (lines.length * lineHeight) + (padding * 2);
+        const bgX = state.textOffsetX;
+        const bgY = previewCanvas.height - state.textOffsetY - bgHeight;
+
+        // Draw black rounded rectangle background with green outline
+        const textRadius = 12;
+        ctx.beginPath();
+        ctx.moveTo(bgX + textRadius, bgY);
+        ctx.lineTo(bgX + bgWidth - textRadius, bgY);
+        ctx.quadraticCurveTo(bgX + bgWidth, bgY, bgX + bgWidth, bgY + textRadius);
+        ctx.lineTo(bgX + bgWidth, bgY + bgHeight - textRadius);
+        ctx.quadraticCurveTo(bgX + bgWidth, bgY + bgHeight, bgX + bgWidth - textRadius, bgY + bgHeight);
+        ctx.lineTo(bgX + textRadius, bgY + bgHeight);
+        ctx.quadraticCurveTo(bgX, bgY + bgHeight, bgX, bgY + bgHeight - textRadius);
+        ctx.lineTo(bgX, bgY + textRadius);
+        ctx.quadraticCurveTo(bgX, bgY, bgX + textRadius, bgY);
+        ctx.closePath();
+
+        // Fill background
+        ctx.fillStyle = '#000000';
+        ctx.fill();
+
+        // Draw green outline
+        ctx.strokeStyle = '#9adb38';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Draw text (vertically centered in each line)
+        ctx.fillStyle = '#9adb38';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+
+        let yPosition = bgY + padding + (lineHeight / 2);
+        for (const line of lines) {
+          ctx.font = line.font;
+          ctx.fillText(line.text, bgX + padding, yPosition);
+          yPosition += lineHeight;
+        }
+      }
+    }
+
+    // Generate final image
+    generateBtn.addEventListener('click', async () => {
+      if (!state.uploadedImage) return;
+
+      loading.classList.add('visible');
+      error.classList.remove('visible');
+      generateBtn.disabled = true;
+
+      try {
+        // Convert uploaded image to data URL
+        const canvas = document.createElement('canvas');
+        canvas.width = state.uploadedImage.width;
+        canvas.height = state.uploadedImage.height;
+        const tempCtx = canvas.getContext('2d');
+        tempCtx.drawImage(state.uploadedImage, 0, 0);
+        const imageDataUrl = canvas.toDataURL('image/png');
+
+        // Get text values
+        const name = document.getElementById('name-input').value;
+        const position = document.getElementById('position-input').value;
+        const company = document.getElementById('company-input').value;
+
+        // Call the serverless function
+        const response = await fetch('/api/render', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            imageDataUrl: imageDataUrl,
+            templateKey: 'gamacon',
+            zoom: state.zoom,
+            offsetX: state.offsetX,
+            offsetY: state.offsetY,
+            name: name,
+            position: position,
+            company: company,
+            textOffsetX: state.textOffsetX,
+            textOffsetY: state.textOffsetY
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to generate image');
+        }
+
+        state.finalImageDataUrl = data.imageDataUrl;
+        resultImage.src = data.imageDataUrl;
+        resultSection.classList.add('visible');
+        editorSection.classList.remove('visible');
+
+      } catch (err) {
+        console.error('Error generating image:', err);
+        error.textContent = `Error: ${err.message}`;
+        error.classList.add('visible');
+      } finally {
+        loading.classList.remove('visible');
+        generateBtn.disabled = false;
+      }
+    });
+
+    // Share button
+    shareBtn.addEventListener('click', async () => {
+      if (!state.finalImageDataUrl) return;
+
+      try {
+        // Convert data URL to blob
+        const response = await fetch(state.finalImageDataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], 'gamacon-social.png', { type: 'image/png' });
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'My GAMACON Image',
+            text: 'Check out my GAMACON image!'
+          });
+        } else {
+          // Fallback to download
+          const link = document.createElement('a');
+          link.href = state.finalImageDataUrl;
+          link.download = 'gamacon-social.png';
+          link.click();
+        }
+      } catch (err) {
+        console.error('Error sharing:', err);
+        // Fallback to download
+        const link = document.createElement('a');
+        link.href = state.finalImageDataUrl;
+        link.download = 'gamacon-social.png';
+        link.click();
+      }
+    });
+
+    // Download button
+    downloadBtn.addEventListener('click', () => {
+      if (!state.finalImageDataUrl) return;
+
+      const link = document.createElement('a');
+      link.href = state.finalImageDataUrl;
+      link.download = 'gamacon-social.png';
+      link.click();
+    });
+
+    // Reset buttons
+    resetBtn.addEventListener('click', () => {
+      photoUpload.value = '';
+      photoUpload.click();
+    });
+
+    newImageBtn.addEventListener('click', () => {
+      state.uploadedImage = null;
+      state.zoom = 1;
+      state.offsetX = 0;
+      state.offsetY = 0;
+      state.finalImageDataUrl = null;
+      photoUpload.value = '';
+      editorSection.classList.remove('visible');
+      resultSection.classList.remove('visible');
+      error.classList.remove('visible');
+    });
+  </script>
+</body>
+</html>

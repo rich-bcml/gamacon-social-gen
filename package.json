@@ -1,0 +1,13 @@
+{
+  "name": "gamacon-social-gen",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "sharp": "^0.33.3",
+    "@napi-rs/canvas": "^0.1.52"
+  }
+}

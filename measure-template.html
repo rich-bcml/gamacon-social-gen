@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { margin: 0; padding: 20px; background: #111; }
+    #container {
+      position: relative;
+      display: inline-block;
+      border: 2px solid #6df56d;
+    }
+    #canvas-bg, #canvas-fg {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #canvas-bg {
+      pointer-events: none;
+    }
+    #canvas-fg {
+      cursor: move;
+    }
+    #overlay {
+      position: absolute;
+      border: 3px solid #ff0000;
+      background: rgba(255, 0, 0, 0.2);
+      pointer-events: none;
+      z-index: 10;
+    }
+    #text-overlay {
+      position: absolute;
+      border: 3px solid #6df56d;
+      background: rgba(109, 245, 109, 0.2);
+      pointer-events: none;
+      z-index: 11;
+    }
+    .controls {
+      color: white;
+      font-family: monospace;
+      margin-top: 20px;
+      background: #222;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 800px;
+    }
+    .control-section {
+      margin-bottom: 25px;
+      padding: 15px;
+      background: #2a2f36;
+      border-radius: 8px;
+    }
+    .control-section h3 {
+      margin-top: 0;
+      color: #6df56d;
+      font-size: 1.1rem;
+    }
+    .control-row {
+      margin: 10px 0;
+    }
+    input[type="number"] {
+      width: 80px;
+      margin: 0 10px;
+      padding: 4px 8px;
+      background: #1a1f26;
+      border: 1px solid #444;
+      color: white;
+      border-radius: 4px;
+    }
+    .info {
+      margin-top: 10px;
+      padding: 15px;
+      background: #333;
+      border-left: 4px solid #6df56d;
+      font-size: 14px;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+    button {
+      background: #6df56d;
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 10px;
+      font-size: 1rem;
+    }
+    button:hover {
+      opacity: 0.8;
+    }
+    .hint {
+      color: #888;
+      font-size: 0.9rem;
+      font-style: italic;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <canvas id="canvas-bg"></canvas>
+    <canvas id="canvas-fg"></canvas>
+    <div id="overlay"></div>
+    <div id="text-overlay"></div>
+  </div>
+
+  <div class="controls">
+    <h2 style="margin-top: 0; color: #6df56d;">GAMACON Template Measurement Tool</h2>
+
+    <div class="control-section">
+      <h3>Foreground Layer Position</h3>
+      <div class="control-row">
+        <label>FG X: <input type="number" id="fg-x" value="0"></label>
+        <label>FG Y: <input type="number" id="fg-y" value="0"></label>
+      </div>
+      <div class="hint">Drag the foreground layer or use arrow keys (hold Shift for 10px steps)</div>
+    </div>
+
+    <div class="control-section">
+      <h3>Photo Region (Red Box)</h3>
+      <div class="control-row">
+        <label>X: <input type="number" id="x" value="86"></label>
+        <label>Y: <input type="number" id="y" value="90"></label>
+        <label>Width: <input type="number" id="w" value="520"></label>
+        <label>Height: <input type="number" id="h" value="760"></label>
+        <label>Radius: <input type="number" id="r" value="34"></label>
+      </div>
+      <div class="hint">Adjust the red box to match where the portrait should appear</div>
+    </div>
+
+    <div class="control-section">
+      <h3>Text Background Position (Green Box)</h3>
+      <div class="control-row">
+        <label>Text X: <input type="number" id="text-x" value="50"></label>
+        <label>Text Y (from bottom): <input type="number" id="text-y" value="90"></label>
+      </div>
+      <div class="hint">Position where the text background will appear (green box shows approximate size)</div>
+    </div>
+
+    <button onclick="copyCode()">📋 Copy All Coordinates to Clipboard</button>
+
+    <div class="info" id="info">Loading...</div>
+  </div>
+
+  <script>
+    const canvasBg = document.getElementById('canvas-bg');
+    const canvasFg = document.getElementById('canvas-fg');
+    const ctxBg = canvasBg.getContext('2d');
+    const ctxFg = canvasFg.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const container = document.getElementById('container');
+    const info = document.getElementById('info');
+
+    const inputs = {
+      x: document.getElementById('x'),
+      y: document.getElementById('y'),
+      w: document.getElementById('w'),
+      h: document.getElementById('h'),
+      r: document.getElementById('r'),
+      fgX: document.getElementById('fg-x'),
+      fgY: document.getElementById('fg-y'),
+      textX: document.getElementById('text-x'),
+      textY: document.getElementById('text-y')
+    };
+
+    let fgOffsetX = 0;
+    let fgOffsetY = 0;
+    let textOffsetX = 50;
+    let textOffsetY = 90;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    // Load both template images
+    const imgBg = new Image();
+    const imgFg = new Image();
+    let imagesLoaded = 0;
+
+    function onImageLoad() {
+      imagesLoaded++;
+      if (imagesLoaded === 2) {
+        // Both images loaded
+        canvasBg.width = imgBg.naturalWidth;
+        canvasBg.height = imgBg.naturalHeight;
+        canvasFg.width = imgBg.naturalWidth;
+        canvasFg.height = imgBg.naturalHeight;
+
+        // Set container size
+        container.style.width = imgBg.naturalWidth + 'px';
+        container.style.height = imgBg.naturalHeight + 'px';
+
+        // Initial render
+        render();
+        updateInfo();
+      }
+    }
+
+    imgBg.onload = onImageLoad;
+    imgFg.onload = onImageLoad;
+    imgBg.src = 'public/templates/gamacon-bg.png';
+    imgFg.src = 'public/templates/gamacon-fg.png';
+
+    // Render function
+    function render() {
+      // Clear canvases
+      ctxBg.clearRect(0, 0, canvasBg.width, canvasBg.height);
+      ctxFg.clearRect(0, 0, canvasFg.width, canvasFg.height);
+
+      // Draw background
+      ctxBg.drawImage(imgBg, 0, 0);
+
+      // Draw foreground with offset
+      ctxFg.drawImage(imgFg, fgOffsetX, fgOffsetY);
+
+      // Update photo region overlay
+      updateOverlay();
+      updateTextOverlay();
+    }
+
+    function updateOverlay() {
+      const x = parseInt(inputs.x.value) || 0;
+      const y = parseInt(inputs.y.value) || 0;
+      const w = parseInt(inputs.w.value) || 0;
+      const h = parseInt(inputs.h.value) || 0;
+      const r = parseInt(inputs.r.value) || 0;
+
+      overlay.style.left = x + 'px';
+      overlay.style.top = y + 'px';
+      overlay.style.width = w + 'px';
+      overlay.style.height = h + 'px';
+      overlay.style.borderRadius = r + 'px';
+
+      updateInfo();
+    }
+
+    function updateTextOverlay() {
+      const textOverlay = document.getElementById('text-overlay');
+
+      // Approximate text box dimensions (3 lines of text with padding)
+      const padding = 20;
+      const lineHeight = 40;
+      const approximateWidth = 300;  // Rough estimate
+      const approximateHeight = (3 * lineHeight) + (padding * 2);
+
+      const bgX = textOffsetX;
+      const bgY = canvasBg.height - textOffsetY - approximateHeight;
+
+      textOverlay.style.left = bgX + 'px';
+      textOverlay.style.top = bgY + 'px';
+      textOverlay.style.width = approximateWidth + 'px';
+      textOverlay.style.height = approximateHeight + 'px';
+      textOverlay.style.borderRadius = '12px';
+
+      updateInfo();
+    }
+
+    function updateInfo() {
+      const x = parseInt(inputs.x.value) || 0;
+      const y = parseInt(inputs.y.value) || 0;
+      const w = parseInt(inputs.w.value) || 0;
+      const h = parseInt(inputs.h.value) || 0;
+      const r = parseInt(inputs.r.value) || 0;
+
+      info.innerHTML = `Template size: ${canvasBg.width} x ${canvasBg.height}px
+
+<strong style="color: #6df56d;">Foreground Layer Position:</strong>
+FG X: ${fgOffsetX}px
+FG Y: ${fgOffsetY}px
+
+<strong style="color: #ff6666;">Photo Region Coordinates:</strong>
+X: ${x}px (from left edge)
+Y: ${y}px (from top edge)
+Width: ${w}px
+Height: ${h}px
+Border Radius: ${r}px
+Coverage: ${((w * h) / (canvasBg.width * canvasBg.height) * 100).toFixed(1)}% of template
+
+<strong style="color: #6df56d;">Text Background Position:</strong>
+Text X: ${textOffsetX}px (from left edge)
+Text Y: ${textOffsetY}px (from bottom edge)`;
+    }
+
+    // Input listeners
+    Object.values(inputs).forEach(input => {
+      input.addEventListener('input', () => {
+        if (input === inputs.fgX) {
+          fgOffsetX = parseInt(input.value) || 0;
+          render();
+        } else if (input === inputs.fgY) {
+          fgOffsetY = parseInt(input.value) || 0;
+          render();
+        } else if (input === inputs.textX) {
+          textOffsetX = parseInt(input.value) || 0;
+          updateTextOverlay();
+        } else if (input === inputs.textY) {
+          textOffsetY = parseInt(input.value) || 0;
+          updateTextOverlay();
+        } else {
+          updateOverlay();
+        }
+      });
+    });
+
+    // Drag foreground layer
+    canvasFg.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragStartX = e.offsetX - fgOffsetX;
+      dragStartY = e.offsetY - fgOffsetY;
+      canvasFg.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+
+      const rect = canvasFg.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      fgOffsetX = Math.round(mouseX - dragStartX);
+      fgOffsetY = Math.round(mouseY - dragStartY);
+
+      inputs.fgX.value = fgOffsetX;
+      inputs.fgY.value = fgOffsetY;
+
+      render();
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        canvasFg.style.cursor = 'move';
+      }
+    });
+
+    // Keyboard controls for fine-tuning foreground
+    document.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+
+      const step = e.shiftKey ? 10 : 1;
+      let changed = false;
+
+      switch(e.key) {
+        case 'ArrowLeft':
+          fgOffsetX -= step;
+          changed = true;
+          break;
+        case 'ArrowRight':
+          fgOffsetX += step;
+          changed = true;
+          break;
+        case 'ArrowUp':
+          fgOffsetY -= step;
+          changed = true;
+          break;
+        case 'ArrowDown':
+          fgOffsetY += step;
+          changed = true;
+          break;
+      }
+
+      if (changed) {
+        e.preventDefault();
+        inputs.fgX.value = fgOffsetX;
+        inputs.fgY.value = fgOffsetY;
+        render();
+      }
+    });
+
+    function copyCode() {
+      const x = inputs.x.value;
+      const y = inputs.y.value;
+      const w = inputs.w.value;
+      const h = inputs.h.value;
+      const r = inputs.r.value;
+
+      const code = `Foreground Layer Position:
+fgOffsetX: ${fgOffsetX}
+fgOffsetY: ${fgOffsetY}
+
+Photo Region (maskRegion):
+x: ${x}
+y: ${y}
+width: ${w}
+height: ${h}
+radius: ${r}
+
+Text Background Position:
+textOffsetX: ${textOffsetX}
+textOffsetY: ${textOffsetY}`;
+
+      navigator.clipboard.writeText(code).then(() => {
+        alert('✅ Coordinates copied to clipboard!\n\nPaste them to share the exact positioning.');
+      });
+    }
+  </script>
+</body>
+</html>
