@@ -8,11 +8,27 @@ const fontPath = join(process.cwd(), 'public/fonts/Mont-HeavyDEMO.otf');
 GlobalFonts.registerFromPath(fontPath, 'Mont');
 
 export default async (req, context) => {
+  // CORS headers for all responses
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+
+  // Handle OPTIONS preflight request
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders
+    });
+  }
+
   // Only accept POST requests
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' }
+      headers: corsHeaders
     });
   }
 
@@ -23,7 +39,7 @@ export default async (req, context) => {
     if (!imageDataUrl) {
       return new Response(JSON.stringify({ error: 'Missing imageDataUrl' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: corsHeaders
       });
     }
 
@@ -314,7 +330,7 @@ export default async (req, context) => {
       imageDataUrl: finalDataUrl
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: corsHeaders
     });
 
   } catch (error) {
@@ -324,7 +340,7 @@ export default async (req, context) => {
       details: error.message
     }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: corsHeaders
     });
   }
 };
