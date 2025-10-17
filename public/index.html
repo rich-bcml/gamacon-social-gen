@@ -312,7 +312,7 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.2
+      v1.0.3
     </div>
   </div>
 
@@ -696,31 +696,40 @@
             text: 'Check out my GAMACON image!'
           });
         } else {
-          // Fallback to download
-          const link = document.createElement('a');
-          link.href = state.finalImageDataUrl;
-          link.download = 'gamacon-social.png';
-          link.click();
+          // Fallback to download with user gesture
+          downloadImage();
         }
       } catch (err) {
         console.error('Error sharing:', err);
         // Fallback to download
-        const link = document.createElement('a');
-        link.href = state.finalImageDataUrl;
-        link.download = 'gamacon-social.png';
-        link.click();
+        downloadImage();
       }
     });
 
     // Download button
     downloadBtn.addEventListener('click', () => {
+      downloadImage();
+    });
+
+    // Download helper function compatible with Facebook browser
+    function downloadImage() {
       if (!state.finalImageDataUrl) return;
 
       const link = document.createElement('a');
       link.href = state.finalImageDataUrl;
       link.download = 'gamacon-social.png';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+
+      // Add to DOM temporarily for better browser compatibility
+      document.body.appendChild(link);
       link.click();
-    });
+
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(link);
+      }, 100);
+    }
 
     // Reset buttons
     resetBtn.addEventListener('click', () => {
