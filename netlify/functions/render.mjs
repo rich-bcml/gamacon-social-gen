@@ -35,6 +35,38 @@ function getRoundedMask() {
   return cachedRoundedMask;
 }
 
+// Simple in-memory rate limiting
+const rateLimitMap = new Map();
+const RATE_LIMIT = 10; // requests per hour per IP
+const RATE_WINDOW = 60 * 60 * 1000; // 1 hour in ms
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const userRequests = rateLimitMap.get(ip) || [];
+
+  // Remove requests older than the window
+  const recentRequests = userRequests.filter(timestamp => now - timestamp < RATE_WINDOW);
+
+  if (recentRequests.length >= RATE_LIMIT) {
+    return false; // Rate limit exceeded
+  }
+
+  // Add current request
+  recentRequests.push(now);
+  rateLimitMap.set(ip, recentRequests);
+
+  // Cleanup old entries periodically to prevent memory leak
+  if (rateLimitMap.size > 1000) {
+    for (const [key, timestamps] of rateLimitMap.entries()) {
+      if (timestamps.every(t => now - t > RATE_WINDOW)) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }
+
+  return true;
+}
+
 export default async (req, context) => {
   // CORS headers for all responses
   const corsHeaders = {
@@ -63,6 +95,22 @@ export default async (req, context) => {
   try {
     console.log('Render function called');
     console.log('User Agent:', req.headers.get('user-agent'));
+
+    // Rate limiting: Get IP and check limit
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+                req.headers.get('x-real-ip') ||
+                context.ip ||
+                'unknown';
+
+    if (!checkRateLimit(ip)) {
+      console.log('Rate limit exceeded for IP:', ip);
+      return new Response(JSON.stringify({
+        error: 'You\'ve generated too many images recently. Please wait an hour and try again. (Limit: 10 images per hour)'
+      }), {
+        status: 429,
+        headers: corsHeaders
+      });
+    }
 
     const body = await req.json();
     console.log('Request body received, imageDataUrl length:', body.imageDataUrl?.length);

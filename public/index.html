@@ -830,7 +830,7 @@
         // Convert data URL to blob
         const response = await fetch(state.finalImageDataUrl);
         const blob = await response.blob();
-        const file = new File([blob], 'gamacon-social.png', { type: 'image/png' });
+        const file = new File([blob], 'gamacon-social.jpg', { type: 'image/jpeg' });
 
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
@@ -838,14 +838,17 @@
             title: 'My GAMACON Image',
             text: 'Check out my GAMACON image!'
           });
+          // Successfully shared - don't download
         } else {
           // Fallback to download with user gesture
           downloadImage();
         }
       } catch (err) {
         console.error('Error sharing:', err);
-        // Fallback to download
-        downloadImage();
+        // Only download if it wasn't a user cancellation
+        if (err.name !== 'AbortError') {
+          downloadImage();
+        }
       }
     });
 
@@ -903,7 +906,7 @@
         // Normal download for other browsers
         const link = document.createElement('a');
         link.href = state.finalImageDataUrl;
-        link.download = 'gamacon-social.png';
+        link.download = 'gamacon-social.jpg';
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
 
