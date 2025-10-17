@@ -312,7 +312,7 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.5
+      v1.0.6
     </div>
   </div>
 
@@ -672,10 +672,15 @@
           })
         });
 
-        const data = await response.json();
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          throw new Error('Server error. Please try again.');
+        }
 
         if (!response.ok) {
-          throw new Error(data.error || 'Failed to generate image');
+          throw new Error(data.error || 'Failed to generate image. Please try a different photo.');
         }
 
         state.finalImageDataUrl = data.imageDataUrl;

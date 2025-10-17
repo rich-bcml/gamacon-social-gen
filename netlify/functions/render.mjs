@@ -43,8 +43,30 @@ export default async (req, context) => {
       });
     }
 
-    // Parse the data URL
+    // Validate and parse the data URL
+    if (!imageDataUrl.startsWith('data:image/')) {
+      console.error('Invalid imageDataUrl format:', imageDataUrl.substring(0, 50));
+      return new Response(JSON.stringify({
+        error: 'Invalid image format. Please ensure you uploaded a valid image file (PNG, JPEG, etc.)'
+      }), {
+        status: 400,
+        headers: corsHeaders
+      });
+    }
+
     const base64Data = imageDataUrl.replace(/^data:image\/\w+;base64,/, '');
+
+    // Validate base64 data
+    if (!base64Data || base64Data === imageDataUrl) {
+      console.error('Failed to extract base64 data from:', imageDataUrl.substring(0, 100));
+      return new Response(JSON.stringify({
+        error: 'Invalid image data format. Please try uploading a different image.'
+      }), {
+        status: 400,
+        headers: corsHeaders
+      });
+    }
+
     const imageBuffer = Buffer.from(base64Data, 'base64');
 
     // Load the template images (background and foreground layers)
