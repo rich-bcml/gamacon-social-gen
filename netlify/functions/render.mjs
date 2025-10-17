@@ -70,9 +70,8 @@ export default async (req, context) => {
     const imageBuffer = Buffer.from(base64Data, 'base64');
 
     // Load the template images (background and foreground layers)
-    // In Netlify Functions, we need to go up to the project root
-    const templateBgPath = join(__dirname, '../../public/templates', `${templateKey}-bg.png`);
-    const templateFgPath = join(__dirname, '../../public/templates', `${templateKey}-fg.png`);
+    const templateBgPath = join(process.cwd(), 'public/templates', `${templateKey}-bg.png`);
+    const templateFgPath = join(process.cwd(), 'public/templates', `${templateKey}-fg.png`);
     const templateBgBuffer = readFileSync(templateBgPath);
     const templateFgBuffer = readFileSync(templateFgPath);
 
