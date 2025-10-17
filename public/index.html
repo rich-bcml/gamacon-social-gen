@@ -312,7 +312,7 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.13
+      v1.0.14
     </div>
   </div>
 
@@ -694,10 +694,14 @@
         });
 
         let data;
+        let responseText;
         try {
-          data = await response.json();
+          responseText = await response.text();
+          console.log('Response text:', responseText.substring(0, 500));
+          data = JSON.parse(responseText);
         } catch (parseError) {
-          throw new Error('Server error. Please try again.');
+          console.error('Parse error:', parseError);
+          throw new Error('Server error: ' + (responseText?.substring(0, 200) || 'No response'));
         }
 
         if (!response.ok) {
