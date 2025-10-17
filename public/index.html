@@ -312,7 +312,7 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.10
+      v1.0.11
     </div>
   </div>
 
@@ -430,33 +430,14 @@
         };
 
         img.onload = () => {
-          // Convert to canvas to ensure it's in a supported format
-          try {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = img.width;
-            tempCanvas.height = img.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.drawImage(img, 0, 0);
-
-            // Verify the canvas has valid data
-            const testData = tempCanvas.toDataURL('image/png');
-            if (!testData || !testData.startsWith('data:image/png')) {
-              throw new Error('Invalid image data');
-            }
-
-            state.uploadedImage = img;
-            state.zoom = 1;
-            state.offsetX = 0;
-            state.offsetY = 0;
-            zoomSlider.value = 100;
-            editorSection.classList.add('visible');
-            resultSection.classList.remove('visible');
-            renderPreview();
-          } catch (err) {
-            console.error('Image conversion error:', err);
-            error.textContent = 'Error processing image. Please try taking a screenshot of your photo and uploading that instead.';
-            error.classList.add('visible');
-          }
+          state.uploadedImage = img;
+          state.zoom = 1;
+          state.offsetX = 0;
+          state.offsetY = 0;
+          zoomSlider.value = 100;
+          editorSection.classList.add('visible');
+          resultSection.classList.remove('visible');
+          renderPreview();
         };
         img.src = event.target.result;
       };
