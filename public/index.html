@@ -312,7 +312,7 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.15
+      v1.0.16
     </div>
   </div>
 
@@ -412,6 +412,16 @@
       if (!file.type.startsWith('image/')) {
         error.textContent = 'Please select an image file (JPEG, PNG, HEIC, etc.)';
         error.classList.add('visible');
+        photoUpload.value = '';
+        return;
+      }
+
+      // Check file size (limit to 10MB to prevent issues)
+      const maxFileSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxFileSize) {
+        error.textContent = 'Photo file is too large (max 10MB). Please use a smaller photo or take a screenshot of your photo and upload that instead.';
+        error.classList.add('visible');
+        photoUpload.value = '';
         return;
       }
 
@@ -419,17 +429,28 @@
       reader.onerror = () => {
         error.textContent = 'Error reading file. Please try a different photo.';
         error.classList.add('visible');
+        photoUpload.value = '';
       };
 
       reader.onload = (event) => {
         const img = new Image();
 
         img.onerror = () => {
-          error.textContent = 'Unable to load this image. Please try a different photo or take a screenshot instead.';
+          error.textContent = 'Unable to load this image format. Please try a JPEG or PNG photo, or take a screenshot of your photo.';
           error.classList.add('visible');
+          photoUpload.value = '';
         };
 
         img.onload = () => {
+          // Check image dimensions (prevent extremely large images)
+          const maxDimension = 4000;
+          if (img.width > maxDimension || img.height > maxDimension) {
+            error.textContent = `Photo is too large (${img.width}x${img.height}). Please use a photo smaller than ${maxDimension}x${maxDimension} pixels, or take a screenshot.`;
+            error.classList.add('visible');
+            photoUpload.value = '';
+            return;
+          }
+
           state.uploadedImage = img;
           state.zoom = 1;
           state.offsetX = 0;
@@ -660,13 +681,24 @@
       generateBtn.disabled = true;
 
       try {
-        // Convert uploaded image to data URL
+        // Convert uploaded image to data URL, resizing if needed to stay under limits
         const canvas = document.createElement('canvas');
-        canvas.width = state.uploadedImage.width;
-        canvas.height = state.uploadedImage.height;
+        let canvasWidth = state.uploadedImage.width;
+        let canvasHeight = state.uploadedImage.height;
+
+        // Resize if image is too large (to prevent exceeding server 6MB limit)
+        const maxDimension = 2000;
+        if (canvasWidth > maxDimension || canvasHeight > maxDimension) {
+          const scale = maxDimension / Math.max(canvasWidth, canvasHeight);
+          canvasWidth = Math.floor(canvasWidth * scale);
+          canvasHeight = Math.floor(canvasHeight * scale);
+        }
+
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
         const tempCtx = canvas.getContext('2d');
-        tempCtx.drawImage(state.uploadedImage, 0, 0);
-        const imageDataUrl = canvas.toDataURL('image/png');
+        tempCtx.drawImage(state.uploadedImage, 0, 0, canvasWidth, canvasHeight);
+        const imageDataUrl = canvas.toDataURL('image/png', 0.92);
 
         // Get text values
         const name = document.getElementById('name-input').value;
