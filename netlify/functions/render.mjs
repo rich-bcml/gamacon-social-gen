@@ -99,14 +99,18 @@ export default async (req, context) => {
     };
 
     // Get user image metadata
+    console.log('Processing user image...');
     const userImage = sharp(imageBuffer);
     const userImageMeta = await userImage.metadata();
+    console.log('User image metadata:', { width: userImageMeta.width, height: userImageMeta.height, format: userImageMeta.format });
 
     // Calculate scaled dimensions
     const scaledWidth = Math.round(userImageMeta.width * zoom);
     const scaledHeight = Math.round(userImageMeta.height * zoom);
+    console.log('Scaled dimensions:', { scaledWidth, scaledHeight, zoom });
 
     // Resize user image with zoom applied using high-quality settings
+    console.log('Resizing user image...');
     const resizedUserImage = await userImage
       .resize(scaledWidth, scaledHeight, {
         fit: 'contain',
@@ -114,8 +118,10 @@ export default async (req, context) => {
         kernel: 'lanczos3'
       })
       .toBuffer();
+    console.log('User image resized successfully');
 
     // Create a canvas the size of the mask region
+    console.log('Creating mask canvas...');
     const maskCanvas = sharp({
       create: {
         width: maskRegion.width,
@@ -124,6 +130,7 @@ export default async (req, context) => {
         background: { r: 0, g: 0, b: 0, alpha: 0 }
       }
     });
+    console.log('Mask canvas created');
 
     // Calculate position to place the resized image within the mask region
     // Apply offsets
