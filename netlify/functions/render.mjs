@@ -351,9 +351,28 @@ export default async (req, context) => {
         .toBuffer();
     }
 
+    // Check size and resize if needed to stay under Netlify's 6MB limit
+    // Base64 encoding adds ~33% overhead, so target max 4MB buffer = ~5.3MB base64
+    const maxBufferSize = 4 * 1024 * 1024; // 4MB
+    if (finalImageBuffer.length > maxBufferSize) {
+      console.log(`Image too large (${finalImageBuffer.length} bytes), resizing to fit under 6MB limit`);
+      // Resize to fit under limit while maintaining aspect ratio
+      const metadata = await sharp(finalImageBuffer).metadata();
+      const scaleFactor = Math.sqrt(maxBufferSize / finalImageBuffer.length);
+      const newWidth = Math.floor(metadata.width * scaleFactor);
+
+      finalImageBuffer = await sharp(finalImageBuffer)
+        .resize(newWidth, null, { withoutEnlargement: true })
+        .png({ quality: 100, compressionLevel: 9 })
+        .toBuffer();
+
+      console.log(`Resized to ${newWidth}px width, new size: ${finalImageBuffer.length} bytes`);
+    }
+
     // Convert to base64
     const finalBase64 = finalImageBuffer.toString('base64');
     const finalDataUrl = `data:image/png;base64,${finalBase64}`;
+    console.log(`Final base64 length: ${finalBase64.length} bytes`);
 
     return new Response(JSON.stringify({
       success: true,
