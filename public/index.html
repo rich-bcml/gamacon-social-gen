@@ -312,7 +312,7 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.7
+      v1.0.8
     </div>
   </div>
 
@@ -774,58 +774,46 @@
     async function downloadImage() {
       if (!state.finalImageDataUrl) return;
 
-      // Facebook browser requires a proper server-hosted image URL
+      // Facebook browser blocks downloads - show instructions to screenshot instead
       if (isInFacebookApp) {
-        try {
-          // Upload to serverless function to get a proper URL
-          const response = await fetch('/api/serve-image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageDataUrl: state.finalImageDataUrl })
-          });
-
-          if (!response.ok) throw new Error('Failed to prepare image');
-
-          // Create a blob URL from the response
-          const blob = await response.blob();
-          const blobUrl = URL.createObjectURL(blob);
-
-          // Open in new window with download link
-          const newWindow = window.open('', '_blank');
-          if (newWindow) {
-            newWindow.document.write(`
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>GAMACON Image</title>
-                <style>
-                  body { margin: 0; background: #0e1217; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-                  img { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-                  .instructions { color: #fff; text-align: center; margin-top: 20px; font-family: sans-serif; max-width: 400px; }
-                  .instructions h2 { color: #9adb38; margin-bottom: 10px; }
-                  .instructions p { line-height: 1.6; margin: 10px 0; }
-                  a { display: inline-block; margin-top: 20px; padding: 12px 24px; background: #9adb38; color: #000; text-decoration: none; border-radius: 8px; font-weight: bold; }
-                </style>
-              </head>
-              <body>
-                <img src="${blobUrl}" alt="GAMACON Image">
-                <div class="instructions">
-                  <h2>Save Your Image</h2>
-                  <p><strong>Method 1:</strong> Long-press the image above and select "Download image" or "Save image"</p>
-                  <p><strong>Method 2:</strong> Tap the button below</p>
-                  <a href="${blobUrl}" download="gamacon-social.png">Download Image</a>
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>GAMACON Image</title>
+              <style>
+                body { margin: 0; background: #0e1217; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+                img { max-width: 100%; height: auto; display: block; }
+                .instructions { color: #fff; text-align: center; margin-top: 30px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 400px; background: #1a1f26; padding: 20px; border-radius: 12px; }
+                .instructions h2 { color: #9adb38; margin: 0 0 15px 0; font-size: 1.3rem; }
+                .instructions p { line-height: 1.6; margin: 10px 0; font-size: 0.95rem; }
+                .step { background: #2a2f36; padding: 10px 15px; border-radius: 8px; margin: 10px 0; border-left: 3px solid #9adb38; }
+              </style>
+            </head>
+            <body>
+              <img src="${state.finalImageDataUrl}" alt="GAMACON Image">
+              <div class="instructions">
+                <h2>Save Your Image</h2>
+                <div class="step">
+                  <strong>1.</strong> Take a screenshot of this page<br>
+                  <small>(Power + Volume Down buttons)</small>
                 </div>
-              </body>
-              </html>
-            `);
-            newWindow.document.close();
-          } else {
-            alert('Please allow pop-ups to save your image. Then try again!');
-          }
-        } catch (err) {
-          console.error('Error preparing image:', err);
-          alert('Error preparing image. Please try again.');
+                <div class="step">
+                  <strong>2.</strong> Crop the screenshot to just the image above
+                </div>
+                <div class="step">
+                  <strong>3.</strong> Share your cropped image!
+                </div>
+              </div>
+            </body>
+            </html>
+          `);
+          newWindow.document.close();
+        } else {
+          alert('Please allow pop-ups to view your image. Then try again!');
         }
       } else {
         // Normal download for other browsers
