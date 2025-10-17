@@ -312,11 +312,19 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.3
+      v1.0.4
     </div>
   </div>
 
   <script>
+    // Detect Facebook in-app browser
+    function isFacebookBrowser() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      return (ua.indexOf('FBAN') > -1) || (ua.indexOf('FBAV') > -1) || (ua.indexOf('FB_IAB') > -1) || (ua.indexOf('Instagram') > -1);
+    }
+
+    const isInFacebookApp = isFacebookBrowser();
+
     // Ensure Mont font is loaded before rendering
     let fontLoaded = false;
 
@@ -372,6 +380,12 @@
     const shareBtn = document.getElementById('share-btn');
     const downloadBtn = document.getElementById('download-btn');
     const newImageBtn = document.getElementById('new-image-btn');
+
+    // Update button text for Facebook browser
+    if (isInFacebookApp) {
+      shareBtn.textContent = 'Save Image';
+      downloadBtn.textContent = 'Save Image';
+    }
 
     // Load template images (background and foreground)
     const templateBgImg = new Image();
@@ -715,20 +729,49 @@
     function downloadImage() {
       if (!state.finalImageDataUrl) return;
 
-      const link = document.createElement('a');
-      link.href = state.finalImageDataUrl;
-      link.download = 'gamacon-social.png';
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      // Facebook browser blocks downloads, so open image in new window instead
+      if (isInFacebookApp) {
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>GAMACON Image</title>
+              <style>
+                body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+                img { max-width: 100%; height: auto; }
+                p { color: #fff; text-align: center; padding: 20px; font-family: sans-serif; }
+              </style>
+            </head>
+            <body>
+              <img src="${state.finalImageDataUrl}" alt="GAMACON Image">
+              <p>Long-press the image to save it to your device</p>
+            </body>
+            </html>
+          `);
+          newWindow.document.close();
+        } else {
+          alert('Please allow pop-ups to save your image. Then try again!');
+        }
+      } else {
+        // Normal download for other browsers
+        const link = document.createElement('a');
+        link.href = state.finalImageDataUrl;
+        link.download = 'gamacon-social.png';
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
 
-      // Add to DOM temporarily for better browser compatibility
-      document.body.appendChild(link);
-      link.click();
+        // Add to DOM temporarily for better browser compatibility
+        document.body.appendChild(link);
+        link.click();
 
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(link);
-      }, 100);
+        // Clean up
+        setTimeout(() => {
+          document.body.removeChild(link);
+        }, 100);
+      }
     }
 
     // Reset buttons
