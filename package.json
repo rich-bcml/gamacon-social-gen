@@ -1,11 +1,11 @@
 {
   "name": "gamacon-social-gen",
-  "version": "1.0.21",
+  "version": "1.0.20",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "netlify dev",
-    "build": "node -e \"const pkg=require('./package.json'); require('fs').writeFileSync('public/version.js', 'window.APP_VERSION=\\\"'+pkg.version+'\\\";')\""
+    "build": "echo 'No build step required'"
   },
   "dependencies": {
     "sharp": "^0.33.3",
