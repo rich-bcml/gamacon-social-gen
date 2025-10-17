@@ -312,7 +312,7 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.19
+      v1.0.20
     </div>
   </div>
 
@@ -763,8 +763,54 @@
 
         state.finalImageDataUrl = data.imageDataUrl;
         resultImage.src = data.imageDataUrl;
-        resultSection.classList.add('visible');
-        editorSection.classList.remove('visible');
+
+        // For Facebook browser, skip buttons and show screenshot instructions immediately
+        if (isInFacebookApp) {
+          editorSection.classList.remove('visible');
+          const newWindow = window.open('', '_blank');
+          if (newWindow) {
+            newWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>GAMACON Image</title>
+                <style>
+                  body { margin: 0; background: #0e1217; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; box-sizing: border-box; }
+                  img { max-width: 100%; height: auto; display: block; }
+                  .instructions { color: #fff; text-align: center; margin-top: 30px; font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 400px; background: #1a1f26; padding: 20px; border-radius: 12px; }
+                  .instructions h2 { color: #9adb38; margin: 0 0 15px 0; font-size: 1.3rem; }
+                  .instructions p { line-height: 1.6; margin: 10px 0; font-size: 0.95rem; }
+                  .step { background: #2a2f36; padding: 10px 15px; border-radius: 8px; margin: 10px 0; border-left: 3px solid #9adb38; }
+                </style>
+              </head>
+              <body>
+                <img src="${data.imageDataUrl}" alt="GAMACON Image">
+                <div class="instructions">
+                  <h2>Save Your Image</h2>
+                  <div class="step">
+                    <strong>1.</strong> Take a screenshot of this page<br>
+                    <small>(Power + Volume Down buttons)</small>
+                  </div>
+                  <div class="step">
+                    <strong>2.</strong> Crop the screenshot to just the image above
+                  </div>
+                  <div class="step">
+                    <strong>3.</strong> Share your cropped image!
+                  </div>
+                </div>
+              </body>
+              </html>
+            `);
+            newWindow.document.close();
+          } else {
+            alert('Please allow pop-ups to view your image. Then try again!');
+          }
+        } else {
+          // Normal flow for other browsers
+          resultSection.classList.add('visible');
+          editorSection.classList.remove('visible');
+        }
 
       } catch (err) {
         console.error('Error generating image:', err);
