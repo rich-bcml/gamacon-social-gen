@@ -33,7 +33,12 @@ export default async (req, context) => {
   }
 
   try {
+    console.log('Render function called');
+    console.log('User Agent:', req.headers.get('user-agent'));
+
     const body = await req.json();
+    console.log('Request body received, imageDataUrl length:', body.imageDataUrl?.length);
+
     const { imageDataUrl, templateKey = 'gamacon', zoom = 1, offsetX = 0, offsetY = 0, name = '', position = '', company = '', textOffsetX = 50, textOffsetY = 90 } = body;
 
     if (!imageDataUrl) {
@@ -68,12 +73,16 @@ export default async (req, context) => {
     }
 
     const imageBuffer = Buffer.from(base64Data, 'base64');
+    console.log('Image buffer created, size:', imageBuffer.length);
 
     // Load the template images (background and foreground layers)
     const templateBgPath = join(process.cwd(), 'public/templates', `${templateKey}-bg.png`);
     const templateFgPath = join(process.cwd(), 'public/templates', `${templateKey}-fg.png`);
+    console.log('Template paths:', { templateBgPath, templateFgPath });
+
     const templateBgBuffer = readFileSync(templateBgPath);
     const templateFgBuffer = readFileSync(templateFgPath);
+    console.log('Templates loaded successfully');
 
     // Define the mask region and foreground offset
     const maskRegion = {
