@@ -312,11 +312,15 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.20
+      v1.0.21
     </div>
   </div>
 
+  <script src="/version.js"></script>
   <script>
+    // Display version from version.js
+    document.querySelector('#version')?.parentElement.querySelector('div').lastChild.textContent = `v${window.APP_VERSION}`;
+
     // Detect Facebook in-app browser
     function isFacebookBrowser() {
       const ua = navigator.userAgent || navigator.vendor || window.opera;
@@ -830,22 +834,26 @@
         // Convert data URL to blob
         const response = await fetch(state.finalImageDataUrl);
         const blob = await response.blob();
-        const file = new File([blob], 'gamacon-social.png', { type: 'image/png' });
+        const file = new File([blob], 'gamacon-social.jpg', { type: 'image/jpeg' });
 
+        // Check if Web Share API is available and supports files
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          console.log('Using Web Share API');
           await navigator.share({
             files: [file],
             title: 'My GAMACON Image',
             text: 'Check out my GAMACON image!'
           });
+          // Don't download after successful share
         } else {
+          console.log('Web Share API not available, falling back to download');
           // Fallback to download with user gesture
           downloadImage();
         }
       } catch (err) {
         console.error('Error sharing:', err);
-        // Fallback to download
-        downloadImage();
+        // Don't auto-download on any error (including user cancellation)
+        // User can use Download button if they want to download
       }
     });
 
@@ -903,7 +911,7 @@
         // Normal download for other browsers
         const link = document.createElement('a');
         link.href = state.finalImageDataUrl;
-        link.download = 'gamacon-social.png';
+        link.download = 'gamacon-social.jpg';
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
 
