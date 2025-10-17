@@ -312,7 +312,7 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.9
+      v1.0.10
     </div>
   </div>
 
@@ -720,7 +720,10 @@
         }
 
         if (!response.ok) {
-          throw new Error(data.error || 'Failed to generate image. Please try a different photo.');
+          // Show detailed error for debugging
+          const errorMsg = data.details || data.error || 'Failed to generate image';
+          const stackInfo = data.stack ? `\n\nStack: ${data.stack}` : '';
+          throw new Error(errorMsg + stackInfo);
         }
 
         state.finalImageDataUrl = data.imageDataUrl;

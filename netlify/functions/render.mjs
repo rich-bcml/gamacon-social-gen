@@ -356,9 +356,12 @@ export default async (req, context) => {
 
   } catch (error) {
     console.error('Error processing image:', error);
+    console.error('Error stack:', error.stack);
     return new Response(JSON.stringify({
       error: 'Failed to process image',
-      details: error.message
+      details: error.message,
+      stack: error.stack,
+      location: error.fileName || 'unknown'
     }), {
       status: 500,
       headers: corsHeaders
