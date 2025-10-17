@@ -7,6 +7,34 @@ import { createCanvas, GlobalFonts } from '@napi-rs/canvas';
 const fontPath = join(process.cwd(), 'public/fonts/Mont-HeavyDEMO.otf');
 GlobalFonts.registerFromPath(fontPath, 'Mont');
 
+// Pre-generate and cache the rounded corner mask (500x550, radius 34)
+let cachedRoundedMask = null;
+function getRoundedMask() {
+  if (cachedRoundedMask) return cachedRoundedMask;
+
+  const maskRegion = { width: 500, height: 550, radius: 34 };
+  const canvas = createCanvas(maskRegion.width, maskRegion.height);
+  const ctx = canvas.getContext('2d');
+
+  const radius = maskRegion.radius;
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.lineTo(maskRegion.width - radius, 0);
+  ctx.quadraticCurveTo(maskRegion.width, 0, maskRegion.width, radius);
+  ctx.lineTo(maskRegion.width, maskRegion.height - radius);
+  ctx.quadraticCurveTo(maskRegion.width, maskRegion.height, maskRegion.width - radius, maskRegion.height);
+  ctx.lineTo(radius, maskRegion.height);
+  ctx.quadraticCurveTo(0, maskRegion.height, 0, maskRegion.height - radius);
+  ctx.lineTo(0, radius);
+  ctx.quadraticCurveTo(0, 0, radius, 0);
+  ctx.closePath();
+  ctx.fillStyle = 'white';
+  ctx.fill();
+
+  cachedRoundedMask = canvas.toBuffer('image/png');
+  return cachedRoundedMask;
+}
+
 export default async (req, context) => {
   // CORS headers for all responses
   const corsHeaders = {
@@ -193,28 +221,8 @@ export default async (req, context) => {
       .toBuffer();
 
 
-    // Create rounded rectangle mask using canvas (to avoid SVG issues in Netlify)
-    const canvas = createCanvas(maskRegion.width, maskRegion.height);
-    const ctx = canvas.getContext('2d');
-
-    // Draw rounded rectangle
-    const radius = maskRegion.radius;
-    ctx.beginPath();
-    ctx.moveTo(radius, 0);
-    ctx.lineTo(maskRegion.width - radius, 0);
-    ctx.quadraticCurveTo(maskRegion.width, 0, maskRegion.width, radius);
-    ctx.lineTo(maskRegion.width, maskRegion.height - radius);
-    ctx.quadraticCurveTo(maskRegion.width, maskRegion.height, maskRegion.width - radius, maskRegion.height);
-    ctx.lineTo(radius, maskRegion.height);
-    ctx.quadraticCurveTo(0, maskRegion.height, 0, maskRegion.height - radius);
-    ctx.lineTo(0, radius);
-    ctx.quadraticCurveTo(0, 0, radius, 0);
-    ctx.closePath();
-    ctx.fillStyle = 'white';
-    ctx.fill();
-
-    // Convert canvas to PNG buffer
-    const roundedMaskPng = canvas.toBuffer('image/png');
+    // Use pre-generated cached mask for performance
+    const roundedMaskPng = getRoundedMask();
 
     // Apply rounded corners mask
     const maskedWithRoundedCorners = await sharp(maskedImage)
@@ -351,10 +359,7 @@ export default async (req, context) => {
           left: 0,
           top: 0
         }])
-        .png({
-          quality: 100,
-          compressionLevel: 6
-        })
+        .jpeg({ quality: 85, mozjpeg: true })
         .toBuffer();
     }
 
@@ -370,7 +375,7 @@ export default async (req, context) => {
 
       finalImageBuffer = await sharp(finalImageBuffer)
         .resize(newWidth, null, { withoutEnlargement: true })
-        .png({ quality: 100, compressionLevel: 9 })
+        .jpeg({ quality: 85, mozjpeg: true })
         .toBuffer();
 
       console.log(`Resized to ${newWidth}px width, new size: ${finalImageBuffer.length} bytes`);
@@ -378,7 +383,7 @@ export default async (req, context) => {
 
     // Convert to base64
     const finalBase64 = finalImageBuffer.toString('base64');
-    const finalDataUrl = `data:image/png;base64,${finalBase64}`;
+    const finalDataUrl = `data:image/jpeg;base64,${finalBase64}`;
     console.log(`Final base64 length: ${finalBase64.length} bytes`);
 
     return new Response(JSON.stringify({

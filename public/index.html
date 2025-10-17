@@ -312,7 +312,7 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.18
+      v1.0.19
     </div>
   </div>
 
@@ -442,8 +442,8 @@
         };
 
         img.onload = () => {
-          // Auto-resize large images to 1200px max to reduce processing load
-          const maxDimension = 1200;
+          // Auto-resize large images to 1000px max to reduce processing load
+          const maxDimension = 1000;
           let finalImage = img;
 
           if (img.width > maxDimension || img.height > maxDimension) {
@@ -454,7 +454,7 @@
             const tempCtx = canvas.getContext('2d');
             tempCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            // Convert canvas back to image
+            // Convert canvas back to image - use JPEG for smaller size
             const resizedImg = new Image();
             resizedImg.onload = () => {
               state.uploadedImage = resizedImg;
@@ -466,7 +466,7 @@
               resultSection.classList.remove('visible');
               renderPreview();
             };
-            resizedImg.src = canvas.toDataURL('image/png', 0.92);
+            resizedImg.src = canvas.toDataURL('image/jpeg', 0.85);
           } else {
             state.uploadedImage = finalImage;
             state.zoom = 1;
@@ -705,7 +705,7 @@
         let canvasHeight = state.uploadedImage.height;
 
         // Resize if image is too large (to prevent exceeding server 6MB limit)
-        const maxDimension = 1200;
+        const maxDimension = 1000;
         if (canvasWidth > maxDimension || canvasHeight > maxDimension) {
           const scale = maxDimension / Math.max(canvasWidth, canvasHeight);
           canvasWidth = Math.floor(canvasWidth * scale);
@@ -716,7 +716,7 @@
         canvas.height = canvasHeight;
         const tempCtx = canvas.getContext('2d');
         tempCtx.drawImage(state.uploadedImage, 0, 0, canvasWidth, canvasHeight);
-        const imageDataUrl = canvas.toDataURL('image/png', 0.92);
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
         // Get text values
         const name = document.getElementById('name-input').value;
