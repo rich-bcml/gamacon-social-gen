@@ -312,7 +312,7 @@
     </div>
 
     <div style="text-align: center; padding: 20px; color: #666; font-size: 0.75rem;">
-      v1.0.17
+      v1.0.18
     </div>
   </div>
 
@@ -442,23 +442,41 @@
         };
 
         img.onload = () => {
-          // Check image dimensions (prevent extremely large images)
-          const maxDimension = 4000;
-          if (img.width > maxDimension || img.height > maxDimension) {
-            error.textContent = `Photo is too large (${img.width}x${img.height}). Please use a photo smaller than ${maxDimension}x${maxDimension} pixels, or take a screenshot.`;
-            error.classList.add('visible');
-            photoUpload.value = '';
-            return;
-          }
+          // Auto-resize large images to 1200px max to reduce processing load
+          const maxDimension = 1200;
+          let finalImage = img;
 
-          state.uploadedImage = img;
-          state.zoom = 1;
-          state.offsetX = 0;
-          state.offsetY = 0;
-          zoomSlider.value = 100;
-          editorSection.classList.add('visible');
-          resultSection.classList.remove('visible');
-          renderPreview();
+          if (img.width > maxDimension || img.height > maxDimension) {
+            const canvas = document.createElement('canvas');
+            const scale = maxDimension / Math.max(img.width, img.height);
+            canvas.width = Math.floor(img.width * scale);
+            canvas.height = Math.floor(img.height * scale);
+            const tempCtx = canvas.getContext('2d');
+            tempCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            // Convert canvas back to image
+            const resizedImg = new Image();
+            resizedImg.onload = () => {
+              state.uploadedImage = resizedImg;
+              state.zoom = 1;
+              state.offsetX = 0;
+              state.offsetY = 0;
+              zoomSlider.value = 100;
+              editorSection.classList.add('visible');
+              resultSection.classList.remove('visible');
+              renderPreview();
+            };
+            resizedImg.src = canvas.toDataURL('image/png', 0.92);
+          } else {
+            state.uploadedImage = finalImage;
+            state.zoom = 1;
+            state.offsetX = 0;
+            state.offsetY = 0;
+            zoomSlider.value = 100;
+            editorSection.classList.add('visible');
+            resultSection.classList.remove('visible');
+            renderPreview();
+          }
         };
         img.src = event.target.result;
       };
@@ -687,7 +705,7 @@
         let canvasHeight = state.uploadedImage.height;
 
         // Resize if image is too large (to prevent exceeding server 6MB limit)
-        const maxDimension = 2000;
+        const maxDimension = 1200;
         if (canvasWidth > maxDimension || canvasHeight > maxDimension) {
           const scale = maxDimension / Math.max(canvasWidth, canvasHeight);
           canvasWidth = Math.floor(canvasWidth * scale);
